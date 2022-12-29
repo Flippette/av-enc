@@ -1,0 +1,61 @@
+#!/usr/bin/bash
+
+# global variables
+op_prefix="./op/av1"
+map_prefix="./map"
+
+# prepare directories
+rm -rf $op_prefix
+rm -rf $map_prefix
+mkdir -p $op_prefix
+mkdir -p $map_prefix
+
+for file in *.mkv; do
+  # prune audio and subs
+  ffmpeg \
+    -i $file \
+    -c copy \
+    -map 0:v \
+    -map 0:a:m:language:jpn \
+    -map 0:s:m:language:eng \
+    "${map_prefix}/${file}"
+
+  # retrieve average frame rate
+  let fps=$(ffprobe \
+    -v error \
+    -select_streams v \
+    -of default=noprint_wrappers=1:nokey=1 \
+    -show_entries stream=avg_frame_rate \
+    $file
+  )
+
+  av1an \
+    -i "${map_prefix}/${file}" \
+    -o "${op_prefix}/${file}" \
+    --video-params "\
+      --profile=0 \
+      --lag-in-frames=35 \
+      --end-usage=q \
+      --cq-level=23 \
+      --kf-max-dist=$((fps * 5)) \
+      --cpu-used=2 \
+      --arnr-strength=4 \
+      --arnr-maxframes=10 \
+      --bit-depth=10 \
+      --enable-fwd-kf=1 \
+      --enable-chroma-deltaq=1 \
+      --quant-b-adapt=1 \
+      --threads=2 \
+    " \
+    --target-quality 85 \
+    --audio-params "\
+      -c:a libopus \
+      -b:a 128k \
+    " \
+    --pix-format yuv420p10le \
+    --encoder aom \
+    --workers 6 \
+    --set-thread-affinity 2 \
+    --passes 2 \
+    --concat mkvmerge
+done
