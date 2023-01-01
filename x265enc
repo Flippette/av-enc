@@ -4,10 +4,11 @@
 prefix="./op/hevc"
 
 # prepare directories
-rm -rf $prefix
 mkdir -p $prefix
 
 for file in *.mkv; do
+  rm -f "${prefix}/${file}"
+
   ffmpeg \
     -i $file \
     -c:v libx265 \
