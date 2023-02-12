@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # global variables
 op_prefix="./op/av1"
@@ -9,66 +9,80 @@ mkdir -p $op_prefix
 mkdir -p $map_prefix
 
 for file in *.mkv; do
-  rm -f "${op_prefix}/${file}"
-  rm -f "${map_prefix}/${file}"
-
-  # prune audio and subs
-  ffmpeg \
-    -i $file \
-    -c copy \
-    -map 0:v \
-    -map 0:a:m:language:jpn \
-    -map 0:s:m:language:eng \
-    "${map_prefix}/${file}"
-
-  # retrieve average frame rate
-  let fps=$(ffprobe \
-    -v error \
-    -select_streams v \
-    -of default=noprint_wrappers=1:nokey=1 \
-    -show_entries stream=avg_frame_rate \
-    $file
-  )
+  if [ ! -e "${op_prefix}/${file}" ]; then
+    rm -f "${map_prefix}/${file}"
   
-  av1an \
-    -i "${map_prefix}/${file}" \
-    -o "${op_prefix}/${file}" \
-    --video-params "\
-      --profile=0 \
-      --passes=2 \
-      --threads=2 \
-      --lag-in-frames=96 \
-      --end-usage=q \
-      --cq-level=23 \
-      --enable-fwd-kf=1 \
-      --enable-keyframe-filtering=2 \
-      --kf-max-dist=$((fps * 10)) \
-      --cpu-used=3 \
-      --bit-depth=10 \
-      --tune-content=animation
-      --tile-columns=1 \
-      --tile-rows=0 \
-      --tune=butteraugli \
-      --aq-mode=1 \
-      --deltaq-mode=1 \
-      --enable-qm=1 \
-      --min-q=1 \
-      --quant-b-adapt=1 \
-      --disable-trellis-quant=0 \
-      --arnr-strength=0 \
-      --arnr-maxframes=15 \
-      --sharpness=2 \
-      --enable-warped-motion=0 \
-    " \
-    --target-quality 85 \
-    --audio-params "\
-      -c:a libopus \
-      -b:a 128k \
-    " \
-    --pix-format yuv420p10le \
-    --encoder aom \
-    --workers $(($(nproc) / 2)) \
-    --set-thread-affinity 2 \
-    --passes 2 \
-    --concat mkvmerge
+    # prune audio and subs
+    ffmpeg \
+      -i $file \
+      -c copy \
+      -map 0:v \
+      -map 0:a:m:language:jpn \
+      -map 0:s:m:language:eng \
+      "${map_prefix}/${file}"
+  
+    # retrieve average frame rate
+    let fps=$(
+      ffprobe \
+        -v error \
+        -select_streams v \
+        -of default=noprint_wrappers=1:nokey=1 \
+        -show_entries stream=avg_frame_rate \
+        $file
+    )
+    
+    pix_fmt=$(
+      ffprobe \
+        -loglevel panic \
+        -show_entries stream=pix_fmt \
+        -select_streams v \
+        "${map_prefix}/${file}" | \
+        grep "=" | \
+        cut -d"=" -f2
+    )
+    
+    av1an \
+      -i "${map_prefix}/${file}" \
+      -o "${op_prefix}/${file}" \
+      --video-params "\
+        --profile=0 \
+        --passes=2 \
+        --threads=2 \
+        --lag-in-frames=96 \
+        --end-usage=q \
+        --cq-level=23 \
+        --enable-fwd-kf=1 \
+        --enable-keyframe-filtering=2 \
+        --kf-max-dist=$((fps * 10)) \
+        --cpu-used=4 \
+        --bit-depth=8 \
+        --tune-content=animation \
+        --tune=butteraugli \
+        --tile-columns=1 \
+        --tile-rows=0 \
+        --aq-mode=1 \
+        --deltaq-mode=1 \
+        --enable-qm=1 \
+        --min-q=1 \
+        --quant-b-adapt=1 \
+        --disable-trellis-quant=0 \
+        --arnr-strength=0 \
+        --arnr-maxframes=15 \
+        --sharpness=2 \
+        --enable-warped-motion=0 \
+      " \
+      --target-quality 92 \
+      --audio-params "\
+        -c:a libopus \
+        -b:a 128k \
+      " \
+      --pix-format $pix_fmt \
+      --encoder aom \
+      --resume \
+      --workers $(($(nproc) / 2)) \
+      --set-thread-affinity 2 \
+      --passes 2 \
+      --concat mkvmerge \
+      --verbose
+  fi
 done
