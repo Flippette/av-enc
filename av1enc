@@ -40,6 +40,15 @@ for file in *.mkv; do
         grep "=" | \
         cut -d"=" -f2
     )
+
+    ffprobe \
+      -loglevel panic \
+      -show_entries stream=profile \
+      -select_streams v \
+      "${map_prefix}/${file}" | \
+      grep 10
+
+    bdepth=$(( $? == 0 ? 10 : 8 ))
     
     av1an \
       -i "${map_prefix}/${file}" \
@@ -54,8 +63,8 @@ for file in *.mkv; do
         --enable-fwd-kf=1 \
         --enable-keyframe-filtering=2 \
         --kf-max-dist=$((fps * 10)) \
-        --cpu-used=4 \
-        --bit-depth=8 \
+        --cpu-used=3 \
+        --bit-depth=${bdepth} \
         --tune-content=animation \
         --tune=butteraugli \
         --tile-columns=1 \
