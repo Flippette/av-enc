@@ -31,15 +31,17 @@ for file in *.mkv; do
         $file
     )
     
-    pix_fmt=$(
+    # coerce pix_fmt to yuv420p & its 10-bit equivalent
+    $(
       ffprobe \
         -loglevel panic \
         -show_entries stream=pix_fmt \
         -select_streams v \
         "${map_prefix}/${file}" | \
-        grep "=" | \
-        cut -d"=" -f2
-    )
+        grep 10
+    ) \
+    && pix_fmt="yuv420p10le"
+    || pix_fmt="yuv420p"
 
     ffprobe \
       -loglevel panic \
