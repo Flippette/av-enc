@@ -42,68 +42,58 @@ fn main() -> Result<()> {
             .spawn()?
             .wait()?;
 
-        #[rustfmt::skip]
-            Command::new("av1an")
-                .args(["-i", &format!("{cwd}/{MAP_PREFIX}/{stem}.{ext}")])
-                .args(["-o", &format!("{cwd}/{OP_PREFIX}/{stem}.{ext}")])
-                .args([
-                    "--video-params",
-                    &format!(
-                        "\"{}\"",
-                        [
-                            "--profile=0",
-                            "--passes=2",
-                            "--threads=2",
-                            "--lag-in-frames=96",
-                            "--end-usage=q",
-                            "--cq-level=23",
-                            "--enable-fwd-kf=1",
-                            "--enable-keyframe-filtering=2",
-                            &format!("--kf-max-dist={}", fps * 10.0),
-                            "--cpu-used=3",
-                            &format!("--bit-depth={bit_depth}"),
-                            "--tune-content=animation",
-                            "--tune=butteraugli",
-                            "--tile-columns=1",
-                            "--tile-rows=0",
-                            "--aq-mode=1",
-                            "--deltaq-mode=1",
-                            "--enable-qm=1",
-                            "--min-q=1",
-                            "--quant-b-adapt=1",
-                            "--disable-trellis-quant=0",
-                            "--arnr-strength=0",
-                            "--arnr-maxframes=15",
-                            "--sharpness=2",
-                            "--enable-warped-motion=0",
-                        ]
-                        .join(" ")
-                    ),
-                ])
-                .args(["--target-quality", "92"])
-                .args([
-                    "--audio-params",
-                    &format!("\"{}\"",
-                        [
-                            "-c:a", "libopus",
-                            "-b:a", "128k"
-                        ]
-                        .join(" ")
-                    ),
-                ])
-                .args(["--pix-format", pix_fmt])
-                .args(["--encoder", "aom"])
-                .arg("--resume")
-                .args([
-                    "--workers",
-                    &(thread::available_parallelism()?.get() / 2).to_string(),
-                ])
-                .args(["--set-thread-affinity", "2"])
-                .args(["--passes", "2"])
-                .args(["--concat", "mkvmerge"])
-                .arg("--verbose")
-                .spawn()?
-                .wait()?;
+        Command::new("av1an")
+            .args(["-i", &format!("{cwd}/{MAP_PREFIX}/{stem}.{ext}")])
+            .args(["-o", &format!("{cwd}/{OP_PREFIX}/{stem}.{ext}")])
+            .args([
+                "--video-params",
+                &[
+                    "--profile=0",
+                    "--passes=2",
+                    "--threads=2",
+                    "--lag-in-frames=96",
+                    "--end-usage=q",
+                    "--cq-level=23",
+                    "--enable-fwd-kf=1",
+                    "--enable-keyframe-filtering=2",
+                    &format!("--kf-max-dist={}", fps * 10.0),
+                    "--cpu-used=3",
+                    &format!("--bit-depth={bit_depth}"),
+                    "--tune-content=animation",
+                    "--tune=butteraugli",
+                    "--tile-columns=1",
+                    "--tile-rows=0",
+                    "--aq-mode=1",
+                    "--deltaq-mode=1",
+                    "--enable-qm=1",
+                    "--min-q=1",
+                    "--quant-b-adapt=1",
+                    "--disable-trellis-quant=0",
+                    "--arnr-strength=0",
+                    "--arnr-maxframes=15",
+                    "--sharpness=2",
+                    "--enable-warped-motion=0",
+                ]
+                .join(" "),
+            ])
+            .args(["--target-quality", "92"])
+            .args([
+                "--audio-params",
+                &["-c:a", "libopus", "-b:a", "128k"].join(" "),
+            ])
+            .args(["--pix-format", pix_fmt])
+            .args(["--encoder", "aom"])
+            .arg("--resume")
+            .args([
+                "--workers",
+                &(thread::available_parallelism()?.get() / 2).to_string(),
+            ])
+            .args(["--set-thread-affinity", "2"])
+            .args(["--passes", "2"])
+            .args(["--concat", "mkvmerge"])
+            .arg("--verbose")
+            .spawn()?
+            .wait()?;
     }
 
     Ok(())
@@ -114,7 +104,7 @@ fn ffprobe_query(file: &Path, entry: &str) -> Result<String> {
         std::process::Command::new("ffprobe")
             .args(["-loglevel", "panic"])
             .args(["-select_streams", "v"])
-            .args(["-show_entries", &format!("stream={}", entry)])
+            .args(["-show_entries", &format!("stream={entry}")])
             .arg(file)
             .output()
             .unwrap()
