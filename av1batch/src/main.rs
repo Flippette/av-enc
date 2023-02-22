@@ -1,12 +1,5 @@
 use evalexpr::eval;
-use std::{
-    env,
-    ffi::OsStr,
-    fs,
-    path::{Path, PathBuf},
-    process::Command,
-    thread,
-};
+use std::{env, ffi::OsStr, fs, path::Path, process::Command, thread};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
