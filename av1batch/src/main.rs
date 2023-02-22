@@ -66,7 +66,7 @@ fn main() -> Result<()> {
                             "--cq-level=23",
                             "--enable-fwd-kf=1",
                             "--enable-keyframe-filtering=2",
-                            &format!("--kf-max-dist={}", fps / 10.0),
+                            &format!("--kf-max-dist={}", fps * 10.0),
                             "--cpu-used=3",
                             &format!("--bit-depth={bit_depth}"),
                             "--tune-content=animation",
