@@ -1,5 +1,12 @@
 use evalexpr::eval;
-use std::{env, ffi::OsStr, fs, path::Path, process::Command, thread};
+use std::{
+    env,
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+    thread,
+};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -19,6 +26,14 @@ fn main() -> Result<()> {
     for file in fs::read_dir(cwd)?
         .filter_map(|e| e.ok())
         .filter(|e| e.metadata().unwrap().is_file())
+        .filter(|e| {
+            !PathBuf::from(format!(
+                "{}/{OP_PREFIX}/{}",
+                e.path().parent().and_then(Path::to_str).unwrap(),
+                e.file_name().to_str().unwrap()
+            ))
+            .exists()
+        })
     {
         let path = file.path();
         let stem = path.file_stem().and_then(OsStr::to_str).unwrap();
