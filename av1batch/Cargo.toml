@@ -1,9 +1,0 @@
-[package]
-name = "av1batch"
-version = "0.1.0"
-edition = "2021"
-authors = ["flippette <quangdatle2006@outlook.com>"]
-license = "MIT"
-
-[dependencies]
-evalexpr = "8.1"
