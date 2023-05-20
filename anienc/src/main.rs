@@ -85,7 +85,7 @@ fn main() -> Result<()> {
                     &format!("crf={crf}"),
                     "aq-mode=1",
                     "enable-qm=1",
-                    &format!("keyint={}", framerate * 10.0),
+                    &format!("keyint={}", (framerate * 10.0).round()),
                     "irefresh-type=2",
                     "scd=1",
                     "lookahead=120",
@@ -131,6 +131,14 @@ fn ffprobe_query(file: &Utf8Path, stream: &str, entry: &str) -> Result<String> {
 fn crf_query(file: &Utf8Path) -> Result<u32> {
     let ab_err = || eyre!("crf query on {file} failed: failed to parse ab-av1 output");
 
+    let framerate = {
+        let query_result = ffprobe_query(file, "v", "avg_frame_rate")?;
+        let mut tokens = query_result.split('/');
+
+        tokens.next().unwrap().parse::<f64>()?
+            / tokens.next().unwrap().parse::<f64>().unwrap_or(1.0)
+    };
+
     String::from_utf8(
         Command::new("ab-av1")
             .arg("crf-search")
@@ -141,7 +149,7 @@ fn crf_query(file: &Utf8Path) -> Result<u32> {
             .args(["--min-samples", "2"])
             .args(["--vmaf-scale", "none"])
             .args(["--preset", "5"])
-            .args(["--keyint", "10s"])
+            .args(["--keyint", &(framerate * 10.0).round().to_string()])
             .args(["--scd", "true"])
             .args([
                 "--svt",
