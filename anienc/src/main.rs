@@ -19,31 +19,30 @@ fn main() -> Result<()> {
         .flat_map(|arg| glob(&arg))
         .flat_map(|p| p.into_iter())
     {
-        let path = match path {
-            Ok(p) => match Utf8PathBuf::try_from(p) {
-                Ok(pb) if pb.canonicalize_utf8().is_ok_and(|cpb| cpb.is_file()) => {
-                    info!("encoding file {pb}.");
-                    pb
-                }
-                Ok(pb) if pb.is_dir() => continue,
-                Ok(pb) => {
-                    warn!("path {pb} does not exist, skipping.");
-                    continue;
-                }
+        let path: Utf8PathBuf = match path {
+            Ok(p) => match Utf8PathBuf::try_from(p.clone()) {
+                Ok(up) => match up.canonicalize_utf8() {
+                    Ok(cup) if cup.is_file() => {
+                        info!("encoding file {cup}.");
+                        cup
+                    }
+                    Ok(cup) if cup.is_dir() => continue,
+                    Ok(cup) => {
+                        warn!("path {cup} does not exist, skipping.");
+                        continue;
+                    }
+                    Err(e) => {
+                        warn!("failed to canonicalize path {up} with error {e:?}, skipping.");
+                        continue;
+                    }
+                },
                 Err(e) => {
-                    warn!(
-                        "failed to parse path {} with error {e:?}, skipping.",
-                        e.as_path().display(),
-                    );
-
+                    warn!("failed to parse {p:?} into unicode with error {e:?}, skipping.");
                     continue;
                 }
             },
             Err(e) => {
-                warn!(
-                    "failed to glob path {} with error {e:?}, skipping.",
-                    e.path().display(),
-                );
+                warn!("glob error encountered, skipping. {e:?}");
                 continue;
             }
         };
