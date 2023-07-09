@@ -1,5 +1,3 @@
-#![feature(if_let_guard, let_chains)]
-
 use camino::{Utf8Path, Utf8PathBuf};
 use eyre::{eyre, Result};
 use glob::glob;
@@ -12,10 +10,7 @@ use tracing::{info, warn};
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    tracing_subscriber::fmt()
-        .compact()
-        .try_init()
-        .map_err(|e| eyre!("failed to initialize logging: {e:?}"))?;
+    tracing_subscriber::fmt().compact().init();
 
     let threads = thread::available_parallelism()?.get();
 
@@ -26,9 +21,9 @@ fn main() -> Result<()> {
     {
         let path = match path {
             Ok(p) => match Utf8PathBuf::try_from(p) {
-                Ok(pb) if let Ok(cpb) = pb.canonicalize_utf8() && cpb.is_file() => {
+                Ok(pb) if pb.canonicalize_utf8().is_ok_and(|cpb| cpb.is_file()) => {
                     info!("encoding file {pb}.");
-                    cpb
+                    pb
                 }
                 Ok(pb) if pb.is_dir() => continue,
                 Ok(pb) => {
@@ -56,14 +51,6 @@ fn main() -> Result<()> {
         let stem = path.file_stem().unwrap_or_default();
         let ext = path.extension().unwrap_or_default();
 
-        let framerate = {
-            let query_result = ffprobe_query(&path, "v", "avg_frame_rate")?;
-            let mut tokens = query_result.split('/');
-
-            tokens.next().unwrap().parse::<f64>()?
-                / tokens.next().unwrap().parse::<f64>().unwrap_or(1.0)
-        };
-
         info!("searching for optimal crf...");
         let crf = crf_query(&path)?;
 
@@ -85,7 +72,7 @@ fn main() -> Result<()> {
                     &format!("crf={crf}"),
                     "aq-mode=1",
                     "enable-qm=1",
-                    &format!("keyint={}", (framerate * 10.0).round()),
+                    &format!("keyint={}", (framerate(&path)? * 10.0).round()),
                     "irefresh-type=2",
                     "scd=1",
                     "lookahead=120",
@@ -128,17 +115,17 @@ fn ffprobe_query(file: &Utf8Path, stream: &str, entry: &str) -> Result<String> {
     .map(String::from)
 }
 
+fn framerate(file: &Utf8Path) -> Result<f64> {
+    let res = ffprobe_query(file, "v", "avg_frame_rate")?;
+    let mut res = res.split('/').take(2).map(str::parse::<f64>);
+
+    let numerator = res.next().unwrap()?;
+    let denominator = res.next().unwrap()?;
+
+    Ok(numerator / denominator)
+}
+
 fn crf_query(file: &Utf8Path) -> Result<u32> {
-    let ab_err = || eyre!("crf query on {file} failed: failed to parse ab-av1 output");
-
-    let framerate = {
-        let query_result = ffprobe_query(file, "v", "avg_frame_rate")?;
-        let mut tokens = query_result.split('/');
-
-        tokens.next().unwrap().parse::<f64>()?
-            / tokens.next().unwrap().parse::<f64>().unwrap_or(1.0)
-    };
-
     String::from_utf8(
         Command::new("ab-av1")
             .arg("crf-search")
@@ -149,7 +136,7 @@ fn crf_query(file: &Utf8Path) -> Result<u32> {
             .args(["--min-samples", "2"])
             .args(["--vmaf-scale", "none"])
             .args(["--preset", "5"])
-            .args(["--keyint", &(framerate * 10.0).round().to_string()])
+            .args(["--keyint", &(framerate(file)? * 10.0).round().to_string()])
             .args(["--scd", "true"])
             .args([
                 "--svt",
@@ -182,10 +169,10 @@ fn crf_query(file: &Utf8Path) -> Result<u32> {
     )?
     .lines()
     .find(|line| line.starts_with("crf"))
-    .ok_or_else(ab_err)?
+    .ok_or_else(|| eyre!("crf query on {file} failed!"))?
     .split_whitespace()
     .nth(1)
-    .ok_or_else(ab_err)?
+    .ok_or_else(|| eyre!("crf query on {file} failed: failed to parse ab-av1 output"))?
     .parse()
     .map_err(|e| eyre!("crf query on {file} failed: {e:?}"))
 }
