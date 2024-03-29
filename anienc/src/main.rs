@@ -83,6 +83,7 @@ fn main() -> Result<()> {
             ])
             .args(["-c:a", "libopus"])
             .args(["-b:a", "128k"])
+            .args(["-c:s", "copy"])
             .args(["-map", "0:v"])
             .args(["-map", "0:a:m:language:jpn"])
             .args(["-map", "0:s:m:language:eng"])
@@ -171,7 +172,9 @@ fn crf_query(file: &Utf8Path) -> Result<u32> {
     .ok_or_else(|| eyre!("crf query on {file} failed!"))?
     .split_whitespace()
     .nth(1)
-    .ok_or_else(|| eyre!("crf query on {file} failed: failed to parse ab-av1 output"))?
+    .ok_or_else(|| {
+        eyre!("crf query on {file} failed: failed to parse ab-av1 output")
+    })?
     .parse()
     .map_err(|e| eyre!("crf query on {file} failed: {e:?}"))
 }
