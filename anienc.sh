@@ -5,7 +5,7 @@ for file in ./*; do
   crf=$(
     ab-av1 crf-search \
       -i "$file" \
-      --pix-format yuv420p \
+      --pix-format yuv420p10le \
       --preset 3 \
       --enc-input hwaccel=auto \
       --min-vmaf 96 \
@@ -17,7 +17,7 @@ for file in ./*; do
   ffmpeg \
     -hwaccel auto \
     -i $file \
-    -pix_fmt yuv420p \
+    -pix_fmt yuv420p10le \
     -c:v libsvtav1 \
     -crf "$crf" \
     -preset 3 \
