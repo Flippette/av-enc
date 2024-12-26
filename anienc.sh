@@ -23,6 +23,7 @@ for file in ./*; do
     -preset 3 \
     -c:a libopus \
     -b:a 160k \
+    -c:s copy \
     -map 0:v \
     -map 0:a:m:language:jpn \
     -map 0:s:m:language:eng \
