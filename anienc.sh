@@ -1,6 +1,12 @@
 #!/bin/sh
 
-for file in ./*; do
+if [ $# -eq 0 ]; then
+  files="./*"
+else
+  files=$*
+fi
+
+for file in $files; do
   echo "probing file $file"
   crf=$(
     ab-av1 crf-search \
@@ -16,7 +22,7 @@ for file in ./*; do
   echo "encoding file $file"
   ffmpeg \
     -hwaccel auto \
-    -i $file \
+    -i "$file" \
     -pix_fmt yuv420p10le \
     -c:v libsvtav1 \
     -crf "$crf" \
