@@ -30,7 +30,7 @@ for file in $files; do
     -c:a libopus \
     -b:a 160k \
     -c:s copy \
-    -map 0:v \
+    -map 0:V \
     -map 0:a:m:language:jpn \
     -map 0:s:m:language:eng \
     "${file%.*}.enc.mkv"
