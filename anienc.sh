@@ -7,7 +7,7 @@ else
 fi
 
 for file in $files; do
-  echo "probing file $file"
+  printf %s\\n "probing file $file"
   crf=$(
     ab-av1 crf-search \
       -i "$file" \
@@ -17,9 +17,9 @@ for file in $files; do
       --min-vmaf 96 \
       --thorough | grep predicted | cut -d ' ' -f 2
   )
-  echo "using crf $crf for file $file"
+  printf %s\\n "using crf $crf for file $file"
 
-  echo "encoding file $file"
+  printf %s\\n "encoding file $file"
   ffmpeg \
     -hwaccel auto \
     -i "$file" \
@@ -34,5 +34,5 @@ for file in $files; do
     -map 0:a:m:language:jpn \
     -map 0:s:m:language:eng \
     "${file%.*}.enc.mkv"
-  echo "finished encoding file $file"
+  printf %s\\n "finished encoding file $file"
 done
