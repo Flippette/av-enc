@@ -1,5 +1,11 @@
 #!/bin/sh
 
+query() {
+  file=$1
+  stream=$2
+  ffprobe -v quiet -show_streams -select_streams "$stream" "$file"
+}
+
 if [ $# -eq 0 ]; then
   files="./*"
 else
@@ -7,6 +13,19 @@ else
 fi
 
 for file in $files; do
+  printf %s\\n "checking file $file"
+  if [ -z "$(query "$file" v)" ]; then
+    printf %s\\n "file $file is missing video stream"
+    continue
+  elif [ -z "$(query "$file" a:m:language:jpn)" ]; then
+    printf %s\\n "file $file is missing jpn audio stream"
+    continue
+  elif [ -z "$(query "$file" s:m:language:eng)" ]; then
+    printf %s\\n "file $file is missing eng subtitle stream"
+    continue
+  fi
+  printf %s\\n "file $file is valid"
+
   printf %s\\n "probing file $file"
   crf=$(
     ab-av1 crf-search \
