@@ -17,6 +17,9 @@ for file in $files; do
       --min-vmaf 96 \
       --thorough | grep predicted | cut -d ' ' -f 2
   )
+  if [ "$crf" = "" ]; then
+    crf=24
+  fi
   printf %s\\n "using crf $crf for file $file"
 
   printf %s\\n "encoding file $file"
